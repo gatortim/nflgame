@@ -36,17 +36,14 @@ import requests
 import logging
 import os
 
-try:
-    import pytz
-except ImportError:
-    pass
+import pytz
 
 import nflgame
 import nflgame.game
 
-log_level = os.getenv("NFLGAME_LOG_LEVEL", '')
+log_level = os.getenv("NFLGAME_LOG_LEVEL", "")
 logging.basicConfig()
-logger = logging.getLogger('nflgame')
+logger = logging.getLogger("nflgame")
 
 if log_level == "INFO":
     logger.root.setLevel(logging.INFO)
@@ -54,7 +51,7 @@ if log_level == "INFO":
 # [00:21] <rasher> burntsushi: Alright, the schedule changes on Wednesday 7:00
 # UTC during the regular season
 
-_CURRENT_WEEK_ENDPOINT = 'http://www.nfl.com/feeds-rs/currentWeek.json'
+_CURRENT_WEEK_ENDPOINT = "http://www.nfl.com/feeds-rs/currentWeek.json"
 """
 Used to update the season state based on the nfl feed-rs api
 """
@@ -76,7 +73,7 @@ _cur_week = None
 _cur_year = None
 """The current year. It is updated infrequently automatically."""
 
-_cur_season_phase = 'PRE'
+_cur_season_phase = "PRE"
 """The current phase of the season."""
 
 _regular = False
@@ -141,9 +138,9 @@ def current_games(year=None, week=None, kind=_cur_season_phase):
         gametime = _game_datetime(info)
         if gametime >= now:
             if (gametime - now).total_seconds() <= 60 * 15:
-                guesses.append(info['eid'])
+                guesses.append(info["eid"])
         elif (now - gametime).total_seconds() <= _MAX_GAME_TIME:
-            guesses.append(info['eid'])
+            guesses.append(info["eid"])
 
     # Now we have a list of all games that are currently playing, are
     # about to start in less than 15 minutes or have already been playing
@@ -157,7 +154,9 @@ def current_games(year=None, week=None, kind=_cur_season_phase):
     return current
 
 
-def run(callback, active_interval=15, inactive_interval=900, wakeup_time=900, stop=None):
+def run(
+    callback, active_interval=15, inactive_interval=900, wakeup_time=900, stop=None
+):
     """
     Starts checking for games that are currently playing.
 
@@ -204,12 +203,12 @@ def run(callback, active_interval=15, inactive_interval=900, wakeup_time=900, st
     # believe to be the active games. Of those, we check to see if any of
     # them are actually already over, and add them to _completed.
     for info in _active_games(inactive_interval):
-        game = nflgame.game.Game(info['eid'])
+        game = nflgame.game.Game(info["eid"])
 
         # if the game is over, add it to our list of completed
         # games and move on.
         if game.game_over():
-            _completed.append(info['eid'])
+            _completed.append(info["eid"])
 
     while True:
         logger.info("--------------")
@@ -256,7 +255,7 @@ def _run_active(callback, games):
 
     active, completed = [], []
     for info in games:
-        game = nflgame.game.Game(info['eid'])
+        game = nflgame.game.Game(info["eid"])
 
         # If no JSON was retrieved, then we're probably just a little early.
         # So just ignore it for now---but we'll keep trying!
@@ -266,7 +265,7 @@ def _run_active(callback, games):
         # If the game is over, added it to completed and _completed.
         if game.game_over():
             completed.append(game)
-            _completed.append(info['eid'])
+            _completed.append(info["eid"])
         else:
             active.append(game)
 
@@ -301,7 +300,11 @@ def _active_games(wakeup_time):
     Returns a list of all active games. In this case, an active game is a game
     that will start within wakeup_time seconds
     """
-    logger.info("_active_games() - Looking for any games within wakeup time of {}".format(wakeup_time))
+    logger.info(
+        "_active_games() - Looking for any games within wakeup time of {}".format(
+            wakeup_time
+        )
+    )
     games = _games_in_week(_cur_year, _cur_week, _cur_season_phase)
     logger.info("{} games found".format(len(games)))
     active = []
@@ -318,7 +321,7 @@ def _active_games(wakeup_time):
     return active
 
 
-def _games_in_week(year, week, kind='REG'):
+def _games_in_week(year, week, kind="REG"):
     """
     A list for the games matching the year/week/kind parameters.
 
@@ -339,14 +342,19 @@ def _game_is_active(gameinfo, wakeup_time):
     now = _now()
     if gametime >= now:
         return (gametime - now).total_seconds() <= wakeup_time
-    return gameinfo['eid'] not in _completed
+    return gameinfo["eid"] not in _completed
 
 
 def _game_datetime(info):
-    hour, minute = info['time'].strip().split(':')
-    d = datetime.datetime(int(info['eid'][:4]), info['month'], info['day'],
-                          (int(hour) + 12) % 24, int(minute))
-    return pytz.timezone('US/Eastern').localize(d).astimezone(pytz.utc)
+    hour, minute = info["time"].strip().split(":")
+    d = datetime.datetime(
+        int(info["eid"][:4]),
+        info["month"],
+        info["day"],
+        (int(hour) + 12) % 24,
+        int(minute),
+    )
+    return pytz.timezone("US/Eastern").localize(d).astimezone(pytz.utc)
 
 
 def _now():
@@ -357,18 +365,20 @@ def _update_week_number():
     global _cur_week, _cur_year, _cur_season_phase
 
     # requests.get is throwing a 403 w/o setting the user agent
-    headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36'}
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36"
+    }
     curWeekResponse = requests.get(_CURRENT_WEEK_ENDPOINT, headers=headers)
 
-    if (curWeekResponse.ok):
+    if curWeekResponse.ok:
         curWeekJson = curWeekResponse.json()
-        week = curWeekJson['week']
-        phase = curWeekJson['seasonType']
+        week = curWeekJson["week"]
+        phase = curWeekJson["seasonType"]
         if phase == "POST" or phase == "PRO":
             week -= 17
         _cur_week = week
         _cur_season_phase = phase
-        _cur_year = curWeekJson['seasonId']
+        _cur_year = curWeekJson["seasonId"]
 
-    # return the time for calculating when to check 
+    # return the time for calculating when to check
     return time.time()

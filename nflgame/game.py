@@ -1,3 +1,5 @@
+"""NFL Games Games"""
+
 from collections import namedtuple
 import os
 import os.path as path
@@ -17,39 +19,47 @@ import nflgame.seq
 import nflgame.statmap
 import nflgame.live
 
-try:
-    import pytz
-except ImportError:
-    pass
+import pytz
 
 
-log_level = os.getenv("NFLGAME_LOG_LEVEL", '')
+log_level = os.getenv("NFLGAME_LOG_LEVEL", "")
 logging.basicConfig()
-logger = logging.getLogger('nflgame')
+logger = logging.getLogger("nflgame")
 
 if log_level == "INFO":
     logger.root.setLevel(logging.INFO)
 
 _MAX_INT = sys.maxsize
 
-_jsonf = path.join(path.split(__file__)[0], 'gamecenter-json', '%s.json.gz')
+_jsonf = path.join(path.split(__file__)[0], "gamecenter-json", "%s.json.gz")
 _json_base_url = "http://www.nfl.com/liveupdate/game-center/%s/%s_gtd.json"
 
-GameDiff = namedtuple('GameDiff', ['before', 'after', 'plays', 'players'])
+GameDiff = namedtuple("GameDiff", ["before", "after", "plays", "players"])
 """
 Represents the difference between two points in time of the same game
 in terms of plays and player statistics.
 """
 
-TeamStats = namedtuple('TeamStats',
-                       ['first_downs', 'total_yds', 'passing_yds',
-                        'rushing_yds', 'penalty_cnt', 'penalty_yds',
-                        'turnovers', 'punt_cnt', 'punt_yds', 'punt_avg',
-                        'pos_time'])
+TeamStats = namedtuple(
+    "TeamStats",
+    [
+        "first_downs",
+        "total_yds",
+        "passing_yds",
+        "rushing_yds",
+        "penalty_cnt",
+        "penalty_yds",
+        "turnovers",
+        "punt_cnt",
+        "punt_yds",
+        "punt_avg",
+        "pos_time",
+    ],
+)
 """A collection of team statistics for an entire game."""
 
 
-class FieldPosition (object):
+class FieldPosition(object):
     """
     Represents field position.
 
@@ -65,6 +75,7 @@ class FieldPosition (object):
     to the field offset to get the new field position as the result of the
     play.
     """
+
     def __new__(cls, pos_team=None, yardline=None, offset=None):
         if not yardline and offset is None:
             return None
@@ -80,7 +91,7 @@ class FieldPosition (object):
         if isinstance(offset, int):
             self.offset = offset
             return
-        if yardline == '50':
+        if yardline == "50":
             self.offset = 0
             return
 
@@ -98,11 +109,11 @@ class FieldPosition (object):
 
     def __str__(self):
         if self.offset > 0:
-            return 'OPP %d' % (50 - self.offset)
+            return "OPP %d" % (50 - self.offset)
         elif self.offset < 0:
-            return 'OWN %d' % (50 + self.offset)
+            return "OWN %d" % (50 + self.offset)
         else:
-            return 'MIDFIELD'
+            return "MIDFIELD"
 
     def add_yards(self, yards):
         """
@@ -113,15 +124,16 @@ class FieldPosition (object):
         return FieldPosition(offset=newoffset)
 
 
-class PossessionTime (object):
+class PossessionTime(object):
     """
     Represents the amount of time a drive lasted in (minutes, seconds).
     """
+
     def __init__(self, clock):
         self.clock = clock
 
         try:
-            self.minutes, self.seconds = list(map(int, self.clock.split(':')))
+            self.minutes, self.seconds = list(map(int, self.clock.split(":")))
         except ValueError:
             self.minutes, self.seconds = 0, 0
 
@@ -137,51 +149,52 @@ class PossessionTime (object):
     def __gt__(self, other):
         return self.total_seconds() > other.total_seconds()
 
-    def __eq__(self,other):
+    def __eq__(self, other):
         return self.total_seconds() == other.total_seconds()
 
-    def __ge__(self,other):
+    def __ge__(self, other):
         return self.total_seconds() >= other.total_seconds()
-    
-    def __le__(self,other):
+
+    def __le__(self, other):
         return self.total_seconds() <= other.total_seconds()
-    
-    def __eq__(self,other):
+
+    def __eq__(self, other):
         return self.total_seconds() == other.total_seconds()
 
     def __add__(self, other):
-        new_time = PossessionTime('0:00')
+        new_time = PossessionTime("0:00")
         total_seconds = self.total_seconds() + other.total_seconds()
         new_time.minutes = total_seconds / 60
         new_time.seconds = total_seconds % 60
-        new_time.clock = '%.2d:%.2d' % (new_time.minutes, new_time.seconds)
+        new_time.clock = "%.2d:%.2d" % (new_time.minutes, new_time.seconds)
         return new_time
 
     def __sub__(self, other):
         assert self >= other
-        new_time = PossessionTime('0:00')
+        new_time = PossessionTime("0:00")
         total_seconds = self.total_seconds() - other.total_seconds()
         new_time.minutes = total_seconds / 60
         new_time.seconds = total_seconds % 60
-        new_time.clock = '%.2d:%.2d' % (new_time.minutes, new_time.seconds)
+        new_time.clock = "%.2d:%.2d" % (new_time.minutes, new_time.seconds)
         return new_time
 
     def __str__(self):
         return self.clock
 
 
-class GameClock (object):
+class GameClock(object):
     """
     Represents the current time in a game. Namely, it keeps track of the
     quarter and clock time. Also, GameClock can represent whether
     the game hasn't started yet, is half time or if it's over.
     """
+
     def __init__(self, qtr, clock):
         self.qtr = qtr
         self.clock = clock
 
         try:
-            self._minutes, self._seconds = list(map(int, self.clock.split(':')))
+            self._minutes, self._seconds = list(map(int, self.clock.split(":")))
         except ValueError:
             self._minutes, self._seconds = 0, 0
         except AttributeError:
@@ -198,9 +211,8 @@ class GameClock (object):
             elif self.is_final():
                 self.__qtr = sys.maxsize
             else:
-                self.qtr = 'Pregame'
+                self.qtr = "Pregame"
 
-    
     @property
     def quarter(self):
         return self.__qtr
@@ -216,16 +228,16 @@ class GameClock (object):
             self.__qtr = 0
 
     def is_pregame(self):
-        return self.qtr == 'Pregame'
+        return self.qtr == "Pregame"
 
     def is_halftime(self):
-        return self.qtr == 'Halftime'
+        return self.qtr == "Halftime"
 
     def is_final(self):
-        return 'final' in self.qtr.lower()
+        return "final" in self.qtr.lower()
 
     def elapsed_time(self):
-        return self.__qtr -1 * 15 * 60 + (self._minutes * 60) + self._seconds
+        return self.__qtr - 1 * 15 * 60 + (self._minutes * 60) + self._seconds
 
     def __lt__(self, other):
         return self.elapsed_time() < other.elapsed_time()
@@ -253,12 +265,12 @@ class GameClock (object):
         """
         try:
             q = int(self.qtr)
-            return 'Q%d %s' % (q, self.clock)
+            return "Q%d %s" % (q, self.clock)
         except ValueError:
             return self.qtr
 
 
-class Game (object):
+class Game(object):
     """
     Game represents a single pre- or regular-season game. It provides a window
     into the statistics of every player that played into the game, along with
@@ -283,22 +295,12 @@ class Game (object):
                 return None
 
             gameData = {
-                'home': {
-                    'abbr': schedule_info['home'],
-                    'score': {
-                        'T': 0
-                    }
-                },
-                'away': {
-                    'abbr': schedule_info['away'],
-                    'score': {
-                        'T': 0
-                    }
-                },
-                "gamekey": schedule_info['gamekey'],
-                "qtr": 'Pregame',
+                "home": {"abbr": schedule_info["home"], "score": {"T": 0}},
+                "away": {"abbr": schedule_info["away"], "score": {"T": 0}},
+                "gamekey": schedule_info["gamekey"],
+                "qtr": "Pregame",
                 "gcJsonAvailable": False,
-                "clock": 0
+                "clock": 0,
             }
 
         game = object.__new__(cls)
@@ -312,17 +314,17 @@ class Game (object):
             try:
                 if eid is not None:
                     game.eid = eid
-                    game.data = json.loads(game.rawData.decode('utf-8'))[game.eid]
+                    game.data = json.loads(game.rawData.decode("utf-8"))[game.eid]
                 else:  # For when we have rawData (fpath) and no eid.
                     game.eid = None
-                    game.data = json.loads(game.rawData.decode('utf-8'))
+                    game.data = json.loads(game.rawData.decode("utf-8"))
                     for k, v in game.data.items():
                         if isinstance(v, dict):
                             game.eid = k
                             game.data = v
                             break
                     assert game.eid is not None
-                game.data['gcJsonAvailable'] = True
+                game.data["gcJsonAvailable"] = True
             except ValueError:
                 return None
 
@@ -346,25 +348,25 @@ class Game (object):
         self.schedule = nflgame.sched.games.get(self.eid, None)
 
         # Home and team cumulative statistics.
-        self.home = self.data['home']['abbr']
-        self.away = self.data['away']['abbr']
-        self.gamekey = nflgame.sched.games[self.eid]['gamekey']
-        self.time = GameClock(self.data['qtr'], self.data['clock'])
-        self.score_home = int(self.data['home']['score']['T'])
-        self.score_away = int(self.data['away']['score']['T'])
-        self.gcJsonAvailable = self.data['gcJsonAvailable']
+        self.home = self.data["home"]["abbr"]
+        self.away = self.data["away"]["abbr"]
+        self.gamekey = nflgame.sched.games[self.eid]["gamekey"]
+        self.time = GameClock(self.data["qtr"], self.data["clock"])
+        self.score_home = int(self.data["home"]["score"]["T"])
+        self.score_away = int(self.data["away"]["score"]["T"])
+        self.gcJsonAvailable = self.data["gcJsonAvailable"]
 
-        if(self.data['gcJsonAvailable']):
-            self.stats_home = _json_team_stats(self.data['home']['stats']['team'])
-            self.stats_away = _json_team_stats(self.data['away']['stats']['team'])
+        if self.data["gcJsonAvailable"]:
+            self.stats_home = _json_team_stats(self.data["home"]["stats"]["team"])
+            self.stats_away = _json_team_stats(self.data["away"]["stats"]["team"])
 
             # Load up some simple static values.
-            self.down = _tryint(self.data['down'])
-            self.togo = _tryint(self.data['togo'])
+            self.down = _tryint(self.data["down"])
+            self.togo = _tryint(self.data["togo"])
             for q in (1, 2, 3, 4, 5):
-                for team in ('home', 'away'):
-                    score = self.data[team]['score'][str(q)]
-                    self.__dict__['score_%s_q%d' % (team, q)] = int(score)
+                for team in ("home", "away"):
+                    score = self.data[team]["score"][str(q)]
+                    self.__dict__["score_%s_q%d" % (team, q)] = int(score)
 
             if not self.game_over():
                 self.winner = None
@@ -376,20 +378,24 @@ class Game (object):
                     self.winner = self.away
                     self.loser = self.home
                 else:
-                    self.winner = '%s/%s' % (self.home, self.away)
-                    self.loser = '%s/%s' % (self.home, self.away)
+                    self.winner = "%s/%s" % (self.home, self.away)
+                    self.loser = "%s/%s" % (self.home, self.away)
 
             # Load the scoring summary into a simple list of strings.
             self.scores = []
-            for k in sorted(map(int, self.data['scrsummary'])):
-                play = self.data['scrsummary'][str(k)]
-                s = '%s - Q%d - %s - %s' \
-                    % (play['team'], play['qtr'], play['type'], play['desc'])
+            for k in sorted(map(int, self.data["scrsummary"])):
+                play = self.data["scrsummary"][str(k)]
+                s = "%s - Q%d - %s - %s" % (
+                    play["team"],
+                    play["qtr"],
+                    play["type"],
+                    play["desc"],
+                )
                 self.scores.append(s)
 
         # Check to see if the game is over, and if so, cache the data.
         if self.game_over() and not os.access(_jsonf % eid, os.R_OK):
-             self.save()
+            self.save()
 
     def is_home(self, team):
         """Returns true if team (i.e., 'NE') is the home team."""
@@ -419,20 +425,26 @@ class Game (object):
         if fpath is None:
             fpath = _jsonf % self.eid
         try:
-            with gzip.open(fpath, 'w+') as outfile:
+            with gzip.open(fpath, "w+") as outfile:
                 outfile.write(self.rawData)
         except IOError:
-            logger.info("Could not cache JSON data. Please " \
-                                 "make '%s' writable." \
-                                 % os.path.dirname(fpath), file=sys.stderr)
+            logger.info(
+                "Could not cache JSON data. Please "
+                "make '%s' writable." % os.path.dirname(fpath),
+                file=sys.stderr,
+            )
 
     def nice_score(self):
         """
         Returns a string of the score of the game.
         e.g., "NE (32) vs. NYG (0)".
         """
-        return '%s (%d) at %s (%d)' \
-               % (self.away, self.score_away, self.home, self.score_home)
+        return "%s (%d) at %s (%d)" % (
+            self.away,
+            self.score_away,
+            self.home,
+            self.score_home,
+        )
 
     def max_player_stats(self):
         """
@@ -460,9 +472,9 @@ class Game (object):
         # max_players with play-by-play stats first. Then go back through
         # and combine them with available game statistics.
         for pplay in play_players:
-            newp = nflgame.player.GamePlayerStats(pplay.playerid,
-                                                  pplay.name, pplay.home,
-                                                  pplay.team)
+            newp = nflgame.player.GamePlayerStats(
+                pplay.playerid, pplay.name, pplay.home, pplay.team
+            )
             maxstats = {}
             for stat, val in pplay._stats.items():
                 maxstats[stat] = val
@@ -477,20 +489,19 @@ class Game (object):
 
                 maxstats = {}
                 for stat, val in pgame._stats.items():
-                    maxstats[stat] = max([val,
-                                          newp._stats.get(stat, -_MAX_INT)])
+                    maxstats[stat] = max([val, newp._stats.get(stat, -_MAX_INT)])
 
                 newp._overwrite_stats(maxstats)
                 break
         return nflgame.seq.GenPlayerStats(max_players)
 
     def __getattr__(self, name):
-        if name == 'players':
+        if name == "players":
             self.__players = _json_game_player_stats(self, self.data)
             self.players = nflgame.seq.GenPlayerStats(self.__players)
             return self.players
-        if name == 'drives':
-            self.__drives = _json_drives(self, self.home, self.data['drives'])
+        if name == "drives":
+            self.__drives = _json_drives(self, self.home, self.data["drives"])
             self.drives = nflgame.seq.GenDrives(self.__drives)
             return self.drives
         raise AttributeError
@@ -544,7 +555,7 @@ def diff(before, after):
     return GameDiff(before=before, after=after, plays=plays, players=players)
 
 
-class Drive (object):
+class Drive(object):
     """
     Drive represents a single drive in an NFL game. It contains a list
     of all plays that happened in the drive, in chronological order.
@@ -553,37 +564,37 @@ class Drive (object):
     of first downs and a short descriptive string of the result of the
     drive.
     """
+
     def __init__(self, game, drive_num, home_team, data):
-        if data is None or 'plays' not in data or len(data['plays']) == 0:
+        if data is None or "plays" not in data or len(data["plays"]) == 0:
             return
         self.game = game
         self.drive_num = drive_num
-        self.team = data['posteam']
+        self.team = data["posteam"]
         self.home = self.team == home_team
-        self.first_downs = int(data['fds'])
-        self.result = data['result']
-        self.penalty_yds = int(data['penyds'])
-        self.total_yds = int(data['ydsgained'])
-        self.pos_time = PossessionTime(data['postime'])
-        self.play_cnt = int(data['numplays'])
-        self.field_start = FieldPosition(self.team, data['start']['yrdln'])
-        self.time_start = GameClock(data['start']['qtr'],
-                                    data['start']['time'])
+        self.first_downs = int(data["fds"])
+        self.result = data["result"]
+        self.penalty_yds = int(data["penyds"])
+        self.total_yds = int(data["ydsgained"])
+        self.pos_time = PossessionTime(data["postime"])
+        self.play_cnt = int(data["numplays"])
+        self.field_start = FieldPosition(self.team, data["start"]["yrdln"])
+        self.time_start = GameClock(data["start"]["qtr"], data["start"]["time"])
 
         # When the game is over, the yardline isn't reported. So find the
         # last play that does report a yardline.
-        if data['end']['yrdln'].strip():
-            self.field_end = FieldPosition(self.team, data['end']['yrdln'])
+        if data["end"]["yrdln"].strip():
+            self.field_end = FieldPosition(self.team, data["end"]["yrdln"])
         else:
             self.field_end = None
-            playids = sorted(map(int, list(data['plays'].keys())), reverse=True)
+            playids = sorted(map(int, list(data["plays"].keys())), reverse=True)
             for pid in playids:
-                yrdln = data['plays'][str(pid)]['yrdln'].strip()
+                yrdln = data["plays"][str(pid)]["yrdln"].strip()
                 if yrdln:
                     self.field_end = FieldPosition(self.team, yrdln)
                     break
             if self.field_end is None:
-                self.field_end = FieldPosition(self.team, '50')
+                self.field_end = FieldPosition(self.team, "50")
 
         # When a drive lasts from Q1 to Q2 or Q3 to Q4, the 'end' doesn't
         # seem to change to the proper quarter. So scan all of the plays
@@ -591,19 +602,18 @@ class Drive (object):
         # seem to always work.)
         # lastplayid = str(max(map(int, data['plays'].keys())))
         # endqtr = data['plays'][lastplayid]['qtr']
-        qtrs = [p['qtr'] for p in list(data['plays'].values())]
+        qtrs = [p["qtr"] for p in list(data["plays"].values())]
         maxq = str(max(list(map(int, qtrs))))
-        self.time_end = GameClock(maxq, data['end']['time'])
+        self.time_end = GameClock(maxq, data["end"]["time"])
 
         # One last sanity check. If the end time is less than the start time,
         # then bump the quarter if it seems reasonable.
         # This technique will blow up if a drive lasts more than fifteen
         # minutes and the quarter numbering is messed up.
-        if self.time_end <= self.time_start \
-                and self.time_end.quarter in (1, 3):
+        if self.time_end <= self.time_start and self.time_end.quarter in (1, 3):
             self.time_end.quarter += 1
 
-        self.__plays = _json_plays(self, data['plays'])
+        self.__plays = _json_plays(self, data["plays"])
         self.plays = nflgame.seq.GenPlays(self.__plays)
 
     def __add__(self, other):
@@ -614,10 +624,11 @@ class Drive (object):
         automatically get None values: result, field_start, field_end,
         time_start and time_end.
         """
-        assert self.team == other.team, \
-            'Cannot add drives from different teams "%s" and "%s".' \
+        assert self.team == other.team, (
+            'Cannot add drives from different teams "%s" and "%s".'
             % (self.team, other.team)
-        new_drive = Drive(None, 0, '', None)
+        )
+        new_drive = Drive(None, 0, "", None)
         new_drive.team = self.team
         new_drive.home = self.home
         new_drive.first_downs = self.first_downs + other.first_downs
@@ -634,11 +645,15 @@ class Drive (object):
         return new_drive
 
     def __str__(self):
-        return '%s (Start: %s, End: %s) %s' \
-               % (self.team, self.time_start, self.time_end, self.result)
+        return "%s (Start: %s, End: %s) %s" % (
+            self.team,
+            self.time_start,
+            self.time_end,
+            self.result,
+        )
 
 
-class Play (object):
+class Play(object):
     """
     Play represents a single play. It contains a list of all players
     that participated in the play (including offense, defense and special
@@ -648,46 +663,46 @@ class Play (object):
     Play objects also contain team-level statistics, such as whether the
     play was a first down, a fourth down failure, etc.
     """
+
     def __init__(self, drive, playid, data):
         self.data = data
         self.drive = drive
         self.playid = playid
-        self.team = data['posteam']
+        self.team = data["posteam"]
         self.home = self.drive.home
-        self.desc = data['desc']
-        self.note = data['note']
-        self.down = int(data['down'])
-        self.yards_togo = int(data['ydstogo'])
-        self.touchdown = 'touchdown' in self.desc.lower()
+        self.desc = data["desc"]
+        self.note = data["note"]
+        self.down = int(data["down"])
+        self.yards_togo = int(data["ydstogo"])
+        self.touchdown = "touchdown" in self.desc.lower()
         self._stats = {}
 
         if not self.team:
             self.time, self.yardline = None, None
         else:
-            self.time = GameClock(data['qtr'], data['time'])
-            self.yardline = FieldPosition(self.team, data['yrdln'])
+            self.time = GameClock(data["qtr"], data["time"])
+            self.yardline = FieldPosition(self.team, data["yrdln"])
 
         # Load team statistics directly into the Play instance.
         # Things like third down attempts, first downs, etc.
-        if '0' in data['players']:
-            for info in data['players']['0']:
-                if info['statId'] not in nflgame.statmap.idmap:
+        if "0" in data["players"]:
+            for info in data["players"]["0"]:
+                if info["statId"] not in nflgame.statmap.idmap:
                     continue
-                statvals = nflgame.statmap.values(info['statId'],
-                                                  info['yards'])
+                statvals = nflgame.statmap.values(info["statId"], info["yards"])
                 for k, v in statvals.items():
                     v = self.__dict__.get(k, 0) + v
                     self.__dict__[k] = v
                     self._stats[k] = v
 
         # Load the sequence of "events" in a play into a list of dictionaries.
-        self.events = _json_play_events(data['players'])
+        self.events = _json_play_events(data["players"])
 
         # Now load cumulative player data for this play into
         # a GenPlayerStats generator. We then flatten this data
         # and add it to the play itself so that plays can be
         # filter by these statistics.
-        self.__players = _json_play_players(self, data['players'])
+        self.__players = _json_play_players(self, data["players"])
         self.players = nflgame.seq.GenPlayerStats(self.__players)
         for p in self.players:
             for k, v in p.stats.items():
@@ -705,13 +720,21 @@ class Play (object):
     def __str__(self):
         if self.team:
             if self.down != 0:
-                return '(%s, %s, Q%d, %d and %d) %s' \
-                       % (self.team, self.data['yrdln'], self.time.qtr,
-                          self.down, self.yards_togo, self.desc)
+                return "(%s, %s, Q%d, %d and %d) %s" % (
+                    self.team,
+                    self.data["yrdln"],
+                    self.time.qtr,
+                    self.down,
+                    self.yards_togo,
+                    self.desc,
+                )
             else:
-                return '(%s, %s, Q%d) %s' \
-                       % (self.team, self.data['yrdln'], self.time.qtr,
-                          self.desc)
+                return "(%s, %s, Q%d) %s" % (
+                    self.team,
+                    self.data["yrdln"],
+                    self.time.qtr,
+                    self.desc,
+                )
         return self.desc
 
     def __eq__(self, other):
@@ -722,7 +745,7 @@ class Play (object):
         return self.playid == other.playid and self.desc == other.desc
 
     def __getattr__(self, name):
-        if name.startswith('__'):
+        if name.startswith("__"):
             raise AttributeError
         return 0
 
@@ -732,17 +755,18 @@ def _json_team_stats(data):
     Takes a team stats JSON entry and converts it to a TeamStats namedtuple.
     """
     return TeamStats(
-        first_downs=int(data['totfd']),
-        total_yds=int(data['totyds']),
-        passing_yds=int(data['pyds']),
-        rushing_yds=int(data['ryds']),
-        penalty_cnt=int(data['pen']),
-        penalty_yds=int(data['penyds']),
-        turnovers=int(data['trnovr']),
-        punt_cnt=int(data['pt']),
-        punt_yds=int(data['ptyds']),
-        punt_avg=int(data['ptavg']),
-        pos_time=PossessionTime(data['top']))
+        first_downs=int(data["totfd"]),
+        total_yds=int(data["totyds"]),
+        passing_yds=int(data["pyds"]),
+        rushing_yds=int(data["ryds"]),
+        penalty_cnt=int(data["pen"]),
+        penalty_yds=int(data["penyds"]),
+        turnovers=int(data["trnovr"]),
+        punt_cnt=int(data["pt"]),
+        punt_yds=int(data["ptyds"]),
+        punt_avg=int(data["ptavg"]),
+        pos_time=PossessionTime(data["top"]),
+    )
 
 
 def _json_drives(game, home_team, data):
@@ -759,7 +783,7 @@ def _json_drives(game, home_team, data):
     drives = []
     for i, drive_num in enumerate(sorted(drive_nums), 1):
         d = Drive(game, i, home_team, data[str(drive_num)])
-        if not hasattr(d, 'game'):  # not a valid drive
+        if not hasattr(d, "game"):  # not a valid drive
             continue
         drives.append(d)
     return drives
@@ -776,7 +800,7 @@ def _json_plays(drive, data):
     seen_desc = set()  # Sometimes duplicates have different play ids...
     for playid in map(str, sorted(map(int, data))):
         p = data[playid]
-        desc = (p['desc'], p['time'], p['yrdln'], p['qtr'])
+        desc = (p["desc"], p["time"], p["yrdln"], p["qtr"])
         if playid in seen_ids or desc in seen_desc:
             continue
         seen_ids.add(playid)
@@ -795,22 +819,22 @@ def _json_play_players(play, data):
     """
     players = OrderedDict()
     for playerid, statcats in data.items():
-        if playerid == '0':
+        if playerid == "0":
             continue
         for info in statcats:
-            if info['statId'] not in nflgame.statmap.idmap:
+            if info["statId"] not in nflgame.statmap.idmap:
                 continue
             if playerid not in players:
-                home = play.drive.game.is_home(info['clubcode'])
+                home = play.drive.game.is_home(info["clubcode"])
                 if home:
                     team_name = play.drive.game.home
                 else:
                     team_name = play.drive.game.away
-                stats = nflgame.player.PlayPlayerStats(playerid,
-                                                       info['playerName'],
-                                                       home, team_name)
+                stats = nflgame.player.PlayPlayerStats(
+                    playerid, info["playerName"], home, team_name
+                )
                 players[playerid] = stats
-            statvals = nflgame.statmap.values(info['statId'], info['yards'])
+            statvals = nflgame.statmap.values(info["statId"], info["yards"])
             players[playerid]._add_stats(statvals)
     return players
 
@@ -822,13 +846,13 @@ def _json_play_events(data):
     temp = list()
     for playerid, statcats in data.items():
         for info in statcats:
-            if info['statId'] not in nflgame.statmap.idmap:
+            if info["statId"] not in nflgame.statmap.idmap:
                 continue
-            statvals = nflgame.statmap.values(info['statId'], info['yards'])
-            statvals['playerid'] = None if playerid == '0' else playerid
-            statvals['playername'] = info['playerName'] or None
-            statvals['team'] = info['clubcode']
-            temp.append((int(info['sequence']), statvals))
+            statvals = nflgame.statmap.values(info["statId"], info["yards"])
+            statvals["playerid"] = None if playerid == "0" else playerid
+            statvals["playername"] = info["playerName"] or None
+            statvals["team"] = info["clubcode"]
+            temp.append((int(info["sequence"]), statvals))
     return [t[1] for t in sorted(temp, key=lambda t: t[0])]
 
 
@@ -839,26 +863,25 @@ def _json_game_player_stats(game, data):
     nflgame.player.GamePlayerStats.
     """
     players = OrderedDict()
-    for team in ('home', 'away'):
+    for team in ("home", "away"):
         for category in nflgame.statmap.categories:
-            if category not in data[team]['stats']:
+            if category not in data[team]["stats"]:
                 continue
-            for pid, raw in data[team]['stats'][category].items():
+            for pid, raw in data[team]["stats"][category].items():
                 stats = {}
                 for k, v in raw.items():
-                    if k == 'name':
+                    if k == "name":
                         continue
-                    stats['%s_%s' % (category, k)] = v
+                    stats["%s_%s" % (category, k)] = v
                 if pid not in players:
-                    home = team == 'home'
+                    home = team == "home"
                     if home:
                         team_name = game.home
                     else:
                         team_name = game.away
-                    players[pid] = nflgame.player.GamePlayerStats(pid,
-                                                                  raw['name'],
-                                                                  home,
-                                                                  team_name)
+                    players[pid] = nflgame.player.GamePlayerStats(
+                        pid, raw["name"], home, team_name
+                    )
                 players[pid]._add_stats(stats)
     return players
 
@@ -907,7 +930,7 @@ def _infer_gc_json_available(eid):
     schedule_info = nflgame._search_schedule(eid=eid)
     if len(schedule_info) == 0:
         logger.info("No game found")
-        #No game found
+        # No game found
         return False, []
 
     gametime = nflgame.live._game_datetime(schedule_info)
@@ -915,7 +938,7 @@ def _infer_gc_json_available(eid):
 
     game_starting_soon = (gametime - now).total_seconds() <= 600
     logger.info("Game Starting Soon Check: {}".format(game_starting_soon))
-    return  game_starting_soon, schedule_info
+    return game_starting_soon, schedule_info
 
 
 def _tryint(v):

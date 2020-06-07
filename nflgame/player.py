@@ -1,5 +1,3 @@
-
-
 import json
 import os.path
 from collections import OrderedDict
@@ -7,7 +5,7 @@ from collections import OrderedDict
 import nflgame.seq
 import nflgame.statmap
 
-_player_json_file = os.path.join(os.path.dirname(__file__), 'players.json')
+_player_json_file = os.path.join(os.path.dirname(__file__), "players.json")
 
 
 def _create_players(jsonf=None):
@@ -28,7 +26,7 @@ def _create_players(jsonf=None):
     return players
 
 
-class Player (object):
+class Player(object):
     """
     Player instances represent meta information about a single player.
     This information includes name, team, position, status, height,
@@ -36,23 +34,24 @@ class Player (object):
 
     Player information is populated from NFL.com profile pages.
     """
+
     def __init__(self, data):
-        self.player_id = data['gsis_id']
-        self.gsis_name = data.get('gsis_name', '')
-        self.full_name = data.get('full_name', '')
-        self.first_name = data.get('first_name', '')
-        self.last_name = data.get('last_name', '')
-        self.team = data.get('team', '')
-        self.position = data.get('position', '')
-        self.profile_id = data.get('profile_id', 0)
-        self.profile_url = data.get('profile_url', '')
-        self.uniform_number = data.get('number', 0)
-        self.birthdate = data.get('birthdate', '')
-        self.college = data.get('college', '')
-        self.height = data.get('height', '')
-        self.weight = data.get('weight', '')
-        self.years_pro = data.get('years_pro', 0)
-        self.status = data.get('status', '')
+        self.player_id = data["gsis_id"]
+        self.gsis_name = data.get("gsis_name", "")
+        self.full_name = data.get("full_name", "")
+        self.first_name = data.get("first_name", "")
+        self.last_name = data.get("last_name", "")
+        self.team = data.get("team", "")
+        self.position = data.get("position", "")
+        self.profile_id = data.get("profile_id", 0)
+        self.profile_url = data.get("profile_url", "")
+        self.uniform_number = data.get("number", 0)
+        self.birthdate = data.get("birthdate", "")
+        self.college = data.get("college", "")
+        self.height = data.get("height", "")
+        self.weight = data.get("weight", "")
+        self.years_pro = data.get("years_pro", 0)
+        self.status = data.get("status", "")
 
         # API backwards compatibility.
         self.gsis_id = self.player_id
@@ -64,8 +63,7 @@ class Player (object):
         games = nflgame.games(year, week)
         players = list(nflgame.combine(games).filter(playerid=self.playerid))
         if len(players) == 0:
-            return GamePlayerStats(self.player_id, self.gsis_name,
-                                   None, self.team)
+            return GamePlayerStats(self.player_id, self.gsis_name, None, self.team)
         return players[0]
 
     def plays(self, year, week=None):
@@ -76,27 +74,27 @@ class Player (object):
         return nflgame.seq.GenPlays(plays)
 
     def __str__(self):
-        return '%s (%s, %s)' % (self.name, self.position, self.team)
+        return "%s (%s, %s)" % (self.name, self.position, self.team)
 
 
-class PlayerDefense (Player):
+class PlayerDefense(Player):
     def __init__(self, team):
         self.playerid = None
         self.name = team
         self.team = team
-        self.position = 'DEF'
+        self.position = "DEF"
 
     def stats(self, year, week=None):
-        assert False, 'Cannot be called on a defense.'
+        assert False, "Cannot be called on a defense."
 
     def plays(self, year, week=None):
-        assert False, 'Cannot be called on a defense.'
+        assert False, "Cannot be called on a defense."
 
     def __str__(self):
-        return '%s Defense' % self.team
+        return "%s Defense" % self.team
 
 
-class PlayerStats (object):
+class PlayerStats(object):
     """
     Player represents a single player and all of his statistical categories.
     Every player has 'playerid', 'name' and 'home' fields.
@@ -116,6 +114,7 @@ class PlayerStats (object):
         if 'passing_yds' in player.__dict__:
             # Do something with player.passing_yds
     """
+
     def __init__(self, playerid, name, home, team):
         """
         Create a new Player instance with the player id (from NFL.com's
@@ -158,14 +157,14 @@ class PlayerStats (object):
             return self.player.position
 
         stats = [
-            (self.passing_att, 'QB'),
-            (self.rushing_att, 'RB'),
-            (self.receiving_tar, 'WR'),
-            (self.defense_tkl, 'DEF'),
-            (self.defense_ast, 'DEF'),
-            (self.kicking_tot, 'K'),
-            (self.kicking_fga, 'K'),
-            (self.punting_tot, 'P'),
+            (self.passing_att, "QB"),
+            (self.rushing_att, "RB"),
+            (self.receiving_tar, "WR"),
+            (self.defense_tkl, "DEF"),
+            (self.defense_ast, "DEF"),
+            (self.kicking_tot, "K"),
+            (self.kicking_fga, "K"),
+            (self.punting_tot, "P"),
         ]
         return sorted(stats, reverse=True)[0][1]
 
@@ -177,7 +176,7 @@ class PlayerStats (object):
         """
         n = 0
         for f, v in self.__dict__.items():
-            if f.endswith('tds'):
+            if f.endswith("tds"):
                 n += v
         return n
 
@@ -187,9 +186,7 @@ class PlayerStats (object):
         Returns the total number of two point conversion attempts for
         the passing, rushing and receiving categories.
         """
-        return (self.passing_twopta
-                + self.rushing_twopta
-                + self.receiving_twopta)
+        return self.passing_twopta + self.rushing_twopta + self.receiving_twopta
 
     @property
     def twoptm(self):
@@ -197,9 +194,7 @@ class PlayerStats (object):
         Returns the total number of two point conversions for
         the passing, rushing and receiving categories.
         """
-        return (self.passing_twoptm
-                + self.rushing_twoptm
-                + self.receiving_twoptm)
+        return self.passing_twoptm + self.rushing_twoptm + self.receiving_twoptm
 
     @property
     def twoptmissed(self):
@@ -207,9 +202,11 @@ class PlayerStats (object):
         Returns the total number of two point conversion failures for
         the passing, rushing and receiving categories.
         """
-        return (self.passing_twoptmissed
-                + self.rushing_twoptmissed
-                + self.receiving_twoptmissed)
+        return (
+            self.passing_twoptmissed
+            + self.rushing_twoptmissed
+            + self.receiving_twoptmissed
+        )
 
     @property
     def stats(self):
@@ -224,8 +221,8 @@ class PlayerStats (object):
         """
         s = []
         for stat, val in self._stats.items():
-            s.append('%s: %s' % (stat, val))
-        return ', '.join(s)
+            s.append("%s: %s" % (stat, val))
+        return ", ".join(s)
 
     def _add_stats(self, stats):
         for k, v in stats.items():
@@ -274,8 +271,7 @@ class PlayerStats (object):
         assert self.playerid == other.playerid
         assert type(self) == type(other)
 
-        new_player = GamePlayerStats(self.playerid,
-                                     self.name, self.home, self.team)
+        new_player = GamePlayerStats(self.playerid, self.name, self.home, self.team)
         new_player._add_stats(self._stats)
         for bk, bv in other._stats.items():
             if bk not in new_player._stats:  # stat was taken away? ignore.
@@ -311,8 +307,8 @@ class PlayerStats (object):
         yards, touchdowns, and interceptions. Passer rating in the NFL is on a
         scale from 0 to 158.3.
         """
-        l = [((self.passing_cmp / self.passing_att) - .3) * 5]
-        l.append(((self.passing_yds / self.passing_att) - 3) * .25)
+        l = [((self.passing_cmp / self.passing_att) - 0.3) * 5]
+        l.append(((self.passing_yds / self.passing_att) - 3) * 0.25)
         l.append((self.tds / self.passing_att) * 20)
         l.append(2.375 - (self.passing_ints / self.passing_att * 25))
 
@@ -331,7 +327,7 @@ class PlayerStats (object):
         return rating
 
 
-class GamePlayerStats (PlayerStats):
+class GamePlayerStats(PlayerStats):
     def __init__(self, playerid, name, home, team):
         super(GamePlayerStats, self).__init__(playerid, name, home, team)
         self.games = 1
@@ -342,5 +338,5 @@ class GamePlayerStats (PlayerStats):
         return new_player
 
 
-class PlayPlayerStats (PlayerStats):
+class PlayPlayerStats(PlayerStats):
     pass

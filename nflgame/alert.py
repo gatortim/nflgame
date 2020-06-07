@@ -83,6 +83,7 @@ import sys
 
 try:
     import googlevoice
+
     _gv_available = True
 except ImportError:
     _gv_available = False
@@ -115,8 +116,11 @@ def google_voice_login(email, passwd):
     global _voice
 
     if not _gv_available:
-        print("The pygooglevoice Python package is required " \
-                             "in order to use Google Voice.", file=sys.stderr)
+        print(
+            "The pygooglevoice Python package is required "
+            "in order to use Google Voice.",
+            file=sys.stderr,
+        )
         return
 
     _voice = googlevoice.Voice()
@@ -153,8 +157,9 @@ def gmail_login(email, passwd):
     before using sms with the provider parameter. It only needs to be called
     once per program execution.
     """
+
     def connect():
-        gmail = smtplib.SMTP('smtp.gmail.com', port=587)
+        gmail = smtplib.SMTP("smtp.gmail.com", port=587)
         gmail.starttls()
         return gmail
 
@@ -169,22 +174,23 @@ def email(to_email, msg, from_email=None):
     email address. If gmail_login was used, this is automatically
     populated using the login email address. Otherwise it is left empty.
     """
-    assert _smtp is not None, \
-        "Either gmail_login or smtp_login must be called to setup an " \
+    assert _smtp is not None, (
+        "Either gmail_login or smtp_login must be called to setup an "
         "smtplib.SMTP instance."
+    )
 
-    from_email_ = ''
+    from_email_ = ""
     if from_email is not None:
         from_email_ = from_email
     elif _email_from is not None:
         from_email_ = _email_from
 
     headers = [
-        'To: %s' % to_email,
-        'From: %s' % from_email_,
-        'Subject: nflgame alert',
+        "To: %s" % to_email,
+        "From: %s" % from_email_,
+        "Subject: nflgame alert",
     ]
-    full_msg = '%s\r\n\r\n%s' % ('\r\n'.join(headers), msg)
+    full_msg = "%s\r\n\r\n%s" % ("\r\n".join(headers), msg)
     _send_email(from_email_, to_email, full_msg)
 
 
@@ -218,20 +224,22 @@ def sms(phone_number, msg, provider=None):
     depending upon your carrier.
     """
     if provider is None:
-        assert _voice is not None, \
-            'You must login to Google Voice using google_voice_login before ' \
-            'sending an sms without the provider parameter.'
+        assert _voice is not None, (
+            "You must login to Google Voice using google_voice_login before "
+            "sending an sms without the provider parameter."
+        )
     if provider is not None:
-        assert _smtp is not None, \
-            'You must login to an SMTP server using gmail_login or by ' \
-            'passing an smtplib.SMTP instance via the smtp parameter' \
-            'before sending an sms with the provider parameter.'
+        assert _smtp is not None, (
+            "You must login to an SMTP server using gmail_login or by "
+            "passing an smtplib.SMTP instance via the smtp parameter"
+            "before sending an sms with the provider parameter."
+        )
 
     if provider is None:
         _google_voice_sms(phone_number, msg)
     else:
-        to = '%s@%s' % (phone_number, providers.get(provider, provider))
-        _send_email('', to, 'To: %s\r\n\r\n%s' % (to, msg))
+        to = "%s@%s" % (phone_number, providers.get(provider, provider))
+        _send_email("", to, "To: %s\r\n\r\n%s" % (to, msg))
 
 
 def _google_voice_sms(phone_number, msg):
@@ -271,13 +279,13 @@ def _send_email(from_email, to_email, msg):
 
 
 providers = {
-    'ATT': 'txt.att.net',
-    'Boost': 'myboostmobile.com',
-    'Cricket': 'sms.mycricket.com',
-    'Sprint': 'messaging.sprintpcs.com',
-    'T-Mobile': 'tmomail.net',
-    'Verizon': 'vtext.com',
-    'Virgin Mobile': 'vmobl.com',
+    "ATT": "txt.att.net",
+    "Boost": "myboostmobile.com",
+    "Cricket": "sms.mycricket.com",
+    "Sprint": "messaging.sprintpcs.com",
+    "T-Mobile": "tmomail.net",
+    "Verizon": "vtext.com",
+    "Virgin Mobile": "vmobl.com",
 }
 """
 A dictionary of providers. The keys are English name identifiers of a

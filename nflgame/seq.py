@@ -6,11 +6,11 @@ from collections import OrderedDict
 from nflgame import statmap
 
 _BUILTIN_PREDS = {
-    '__lt': operator.lt,
-    '__le': operator.le,
-    '__ne': operator.ne,
-    '__ge': operator.ge,
-    '__gt': operator.gt,
+    "__lt": operator.lt,
+    "__le": operator.le,
+    "__ne": operator.ne,
+    "__ge": operator.ge,
+    "__gt": operator.gt,
 }
 """
 A dictionary of suffixes to predicates that can be used in Gen.filter.
@@ -27,7 +27,7 @@ Is equivalent to::
 """
 
 
-class Gen (object):
+class Gen(object):
     """
     Players implements a sequence type and provides a convenient API for
     searching sets of players.
@@ -78,10 +78,11 @@ class Gen (object):
         """
         preds = []
         for k, v in kwargs.items():
+
             def pred(field, value, item):
                 for suffix, p in _BUILTIN_PREDS.items():
                     if field.endswith(suffix):
-                        f = field[:field.index(suffix)]
+                        f = field[: field.index(suffix)]
                         if not hasattr(item, f) or getattr(item, f) is None:
                             return False
                         return p(getattr(item, f), value)
@@ -90,10 +91,10 @@ class Gen (object):
                 if isinstance(value, type(lambda x: x)):
                     return value(getattr(item, field))
                 return getattr(item, field) == value
+
             preds.append(functools.partial(pred, k, v))
 
-        gen = filter(lambda item: all([f(item) for f in preds]),
-                                self)
+        gen = filter(lambda item: all([f(item) for f in preds]), self)
         return self.__class__(gen)
 
     def limit(self, n):
@@ -111,6 +112,7 @@ class Gen (object):
         Note that if field does not exist in any item being sorted, a
         KeyError will be raised.
         """
+
         def attrget(item):
             return getattr(item, field, 0)
 
@@ -118,7 +120,7 @@ class Gen (object):
 
     def __str__(self):
         """Returns a list of items in the sequence."""
-        return '[%s]' % ', '.join([str(item) for item in self])
+        return "[%s]" % ", ".join([str(item) for item in self])
 
     def __iter__(self):
         """Make this an iterable sequence."""
@@ -133,11 +135,12 @@ class Gen (object):
         return reversed(self.__iter)
 
 
-class GenDrives (Gen):
+class GenDrives(Gen):
     """
     GenDrives implements a sequence type and provides a convenient API
     for searching drives.
     """
+
     def plays(self):
         """
         Returns all of the plays, in order, belonging to every drive in
@@ -171,15 +174,15 @@ class GenDrives (Gen):
                     if i == n:
                         return d
                     i += 1
-            assert False, \
-                'Could not find drive %d for team %s.' % (n + 1, team)
+            assert False, "Could not find drive %d for team %s." % (n + 1, team)
 
 
-class GenPlays (Gen):
+class GenPlays(Gen):
     """
     GenPlays implements a sequence type and provides a convenient API
     for searching plays.
     """
+
     def players(self):
         """
         Returns the combined player stats for every play in the sequence.
@@ -194,11 +197,12 @@ class GenPlays (Gen):
         return GenPlayerStats(players)
 
 
-class GenPlayerStats (Gen):
+class GenPlayerStats(Gen):
     """
     GenPlayerStats implements a sequence type and provides a convenient API for
     searching sets of player statistics.
     """
+
     def name(self, name):
         """
         Returns a single player whose name equals `name`. If no such player
@@ -231,57 +235,58 @@ class GenPlayerStats (Gen):
         touchdowns is a convenience method for returning a Players
         sequence of all players with at least one touchdown.
         """
+
         def gen():
             for p in self:
                 for f in p.__dict__:
-                    if f.endswith('tds') and p.__dict__[f] > 0:
+                    if f.endswith("tds") and p.__dict__[f] > 0:
                         yield p
                         break
+
         return self.__class__(gen())
 
     def __filter_category(self, cat):
-        return self.__class__(filter(lambda p: p.has_cat(cat),
-                                                self))
+        return self.__class__(filter(lambda p: p.has_cat(cat), self))
 
     def passing(self):
         """Returns players that have a "passing" statistical category."""
-        return self.__filter_category('passing')
+        return self.__filter_category("passing")
 
     def rushing(self):
         """Returns players that have a "rushing" statistical category."""
-        return self.__filter_category('rushing')
+        return self.__filter_category("rushing")
 
     def receiving(self):
         """Returns players that have a "receiving" statistical category."""
-        return self.__filter_category('receiving')
+        return self.__filter_category("receiving")
 
     def fumbles(self):
         """Returns players that have a "fumbles" statistical category."""
-        return self.__filter_category('fumbles')
+        return self.__filter_category("fumbles")
 
     def kicking(self):
         """Returns players that have a "kicking" statistical category."""
-        return self.__filter_category('kicking')
+        return self.__filter_category("kicking")
 
     def punting(self):
         """Returns players that have a "punting" statistical category."""
-        return self.__filter_category('punting')
+        return self.__filter_category("punting")
 
     def kickret(self):
         """Returns players that have a "kickret" statistical category."""
-        return self.__filter_category('kickret')
+        return self.__filter_category("kickret")
 
     def puntret(self):
         """Returns players that have a "puntret" statistical category."""
-        return self.__filter_category('puntret')
+        return self.__filter_category("puntret")
 
     def defense(self):
         """Returns players that have a "defense" statistical category."""
-        return self.__filter_category('defense')
+        return self.__filter_category("defense")
 
     def penalty(self):
         """Returns players that have a "penalty" statistical category."""
-        return self.__filter_category('penalty')
+        return self.__filter_category("penalty")
 
     def csv(self, fileName, allfields=False):
         """
@@ -306,20 +311,20 @@ class GenPlayerStats (Gen):
                 fields.add(field)
         if allfields:
             for statId, info in statmap.idmap.items():
-                for field in info['fields']:
+                for field in info["fields"]:
                     fields.add(field)
         fields = sorted(list(fields))
 
         for p in players:
             d = {
-                'name': p.name,
-                'id': p.playerid,
-                'home': p.home and 'yes' or 'no',
-                'team': p.team,
-                'pos': 'N/A',
+                "name": p.name,
+                "id": p.playerid,
+                "home": p.home and "yes" or "no",
+                "team": p.team,
+                "pos": "N/A",
             }
             if p.player is not None:
-                d['pos'] = p.player.position
+                d["pos"] = p.player.position
 
             for field in fields:
                 if field in p.__dict__:
@@ -330,7 +335,7 @@ class GenPlayerStats (Gen):
 
         fieldNames = ["name", "id", "home", "team", "pos"] + fields
         rows = [dict((f, f) for f in fieldNames)] + rows
-        csv.DictWriter(open(fileName, 'w'), fieldNames).writerows(rows)
+        csv.DictWriter(open(fileName, "w"), fieldNames).writerows(rows)
 
     def __add__(self, other):
         """

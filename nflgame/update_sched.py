@@ -1,4 +1,3 @@
-
 import argparse
 import time
 import json
@@ -14,11 +13,11 @@ import nflgame
 def year_phase_week(year=None, phase=None, week=None):
     cur_year, _ = nflgame.live.current_year_and_week()
     season_types = (
-        ('PRE', range(0, 4 + 1)),
-        ('REG', range(1, 17 + 1)),
-        ('POST', range(1, 4 + 1)),
+        ("PRE", range(0, 4 + 1)),
+        ("REG", range(1, 17 + 1)),
+        ("POST", range(1, 4 + 1)),
     )
-    for y in range(2009, cur_year+1):
+    for y in range(2009, cur_year + 1):
         if year is not None and year != y:
             continue
         for p, weeks in season_types:
@@ -37,12 +36,12 @@ def schedule_url(year, stype, week):
     `POST`, and `gsis_week` should be a value in the range
     `[0, 17]`.
     """
-    xmlurl = 'http://www.nfl.com/ajax/scorestrip?'
-    if stype == 'POST':
+    xmlurl = "http://www.nfl.com/ajax/scorestrip?"
+    if stype == "POST":
         week += 17
         if week == 21:  # NFL.com you so silly
             week += 1
-    return '%sseason=%d&seasonType=%s&week=%d' % (xmlurl, year, stype, week)
+    return "{}season={}&seasonType={}&week={}".format(xmlurl, year, stype, week)
 
 
 def week_schedule(year, stype, week):
@@ -56,57 +55,59 @@ def week_schedule(year, stype, week):
     try:
         dom = xml.parse(urllib.request.urlopen(url))
     except urllib.error.HTTPError:
-        print >> sys.stderr, 'Could not load %s' % url
+        print("Could not load {}".format(url))
         return []
 
     games = []
     for g in dom.getElementsByTagName("g"):
-        gsis_id = g.getAttribute('eid')
-        games.append({
-            'eid': gsis_id,
-            'wday': g.getAttribute('d'),
-            'year': year,
-            'month': int(gsis_id[4:6]),
-            'day': int(gsis_id[6:8]),
-            'time': g.getAttribute('t'),
-            'meridiem': None,
-            'season_type': stype,
-            'week': week,
-            'home': g.getAttribute('h'),
-            'away': g.getAttribute('v'),
-            'gamekey': g.getAttribute('gsis'),
-        })
+        gsis_id = g.getAttribute("eid")
+        games.append(
+            {
+                "eid": gsis_id,
+                "wday": g.getAttribute("d"),
+                "year": year,
+                "month": int(gsis_id[4:6]),
+                "day": int(gsis_id[6:8]),
+                "time": g.getAttribute("t"),
+                "meridiem": None,
+                "season_type": stype,
+                "week": week,
+                "home": g.getAttribute("h"),
+                "away": g.getAttribute("v"),
+                "gamekey": g.getAttribute("gsis"),
+            }
+        )
 
     for game in games:
-        h = int(game['time'].split(':')[0])
-        m = int(game['time'].split(':')[1])
+        h = int(game["time"].split(":")[0])
+        m = int(game["time"].split(":")[1])
         if 0 < h <= 5:  # All games before "6:00" are PM until proven otherwise
-            game['meridiem'] = 'PM'
+            game["meridiem"] = "PM"
 
-        if game['meridiem'] is None:
+        if game["meridiem"] is None:
 
-            days_games = [g for g in games if g['wday'] == game['wday']]
-            preceeding = [g for g in days_games if g['eid'] < game['eid']]
-            proceeding = [g for g in days_games if g['eid'] > game['eid']]
+            days_games = [g for g in games if g["wday"] == game["wday"]]
+            preceeding = [g for g in days_games if g["eid"] < game["eid"]]
+            proceeding = [g for g in days_games if g["eid"] > game["eid"]]
 
             # If any games *after* this one are AM then so is this
-            if any(g['meridiem'] == 'AM' for g in proceeding):
-                game['meridiem'] = 'AM'
+            if any(g["meridiem"] == "AM" for g in proceeding):
+                game["meridiem"] = "AM"
             # If any games *before* this one are PM then so is this one
-            elif any(g['meridiem'] == 'PM' for g in preceeding):
-                game['meridiem'] = 'PM'
+            elif any(g["meridiem"] == "PM" for g in preceeding):
+                game["meridiem"] = "PM"
             # If any games *after* this one have an "earlier" start it's AM
-            elif any(h > t for t in [int(g['time'].split(':')[0]) for g in proceeding]):
-                game['meridiem'] = 'AM'
+            elif any(h > t for t in [int(g["time"].split(":")[0]) for g in proceeding]):
+                game["meridiem"] = "AM"
             # If any games *before* this one have a "later" start time it's PM
-            elif any(h < t for t in [int(g['time'].split(':')[0]) for g in preceeding]):
-                game['meridiem'] = 'PM'
+            elif any(h < t for t in [int(g["time"].split(":")[0]) for g in preceeding]):
+                game["meridiem"] = "PM"
 
-        if game['meridiem'] is None:
-            if game['wday'] not in ['Sat', 'Sun']:
-                game['meridiem'] = 'PM'
-            if game['season_type'] == 'POST':
-                game['meridiem'] = 'PM'
+        if game["meridiem"] is None:
+            if game["wday"] not in ["Sat", "Sun"]:
+                game["meridiem"] = "PM"
+            if game["season_type"] == "POST":
+                game["meridiem"] = "PM"
 
     return games
 
@@ -136,7 +137,7 @@ def update_week(sched, year, stype, week):
         return False
 
     for game in games:
-        sched[game['eid']] = game
+        sched[game["eid"]] = game
 
     return True
 
@@ -145,35 +146,49 @@ def write_schedule(fpath, sched):
     alist = []
     for gsis_id in sorted(sched):
         alist.append([gsis_id, sched[gsis_id]])
-    json.dump({'time': time.time(), 'games': alist},
-              open(fpath, 'w+'), indent=1, sort_keys=True,
-              separators=(',', ': '))
+    json.dump(
+        {"time": time.time(), "games": alist},
+        open(fpath, "w+"),
+        indent=1,
+        sort_keys=True,
+        separators=(",", ": "),
+    )
 
 
 def eprint(*args, **kwargs):
-    kwargs['file'] = sys.stderr
+    kwargs["file"] = sys.stderr
     print(*args, **kwargs)
 
 
 def run():
     parser = argparse.ArgumentParser(
-        description='Updates nflgame\'s schedule to correspond to the latest '
-                    'information.',
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+        description="Updates nflgame's schedule to correspond to the latest "
+        "information.",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
     aa = parser.add_argument
-    aa('--json-update-file', type=str, default=None,
-       help='When set, the file provided will be updated in place with new '
-            'schedule data from NFL.com. If this option is not set, then the '
-            '"schedule.json" file that comes with nflgame will be updated '
-            'instead.')
-    aa('--rebuild', action='store_true',
-       help='When set, the entire schedule will be rebuilt.')
-    aa('--year', default=None, type=int,
-       help='Force the update to a specific year.')
-    aa('--phase', default=None, choices=['PRE', 'REG', 'POST'],
-       help='Force the update to a specific phase.')
-    aa('--week', default=None, type=int,
-       help='Force the update to a specific week.')
+    aa(
+        "--json-update-file",
+        type=str,
+        default=None,
+        help="When set, the file provided will be updated in place with new "
+        "schedule data from NFL.com. If this option is not set, then the "
+        '"schedule.json" file that comes with nflgame will be updated '
+        "instead.",
+    )
+    aa(
+        "--rebuild",
+        action="store_true",
+        help="When set, the entire schedule will be rebuilt.",
+    )
+    aa("--year", default=None, type=int, help="Force the update to a specific year.")
+    aa(
+        "--phase",
+        default=None,
+        choices=["PRE", "REG", "POST"],
+        help="Force the update to a specific phase.",
+    )
+    aa("--week", default=None, type=int, help="Force the update to a specific week.")
     args = parser.parse_args()
 
     if args.json_update_file is None:
@@ -183,14 +198,14 @@ def run():
     # the JSON database.
     if not os.access(args.json_update_file, os.W_OK):
         eprint('I do not have write access to "%s".' % args.json_update_file)
-        eprint('Without write access, I cannot update the schedule.')
+        eprint("Without write access, I cannot update the schedule.")
         sys.exit(1)
 
     if args.rebuild:
         sched = new_schedule()
     else:
         sched, last = nflgame.sched._create_schedule(args.json_update_file)
-        print('Last updated: %s' % last)
+        print("Last updated: %s" % last)
 
         if (args.year, args.phase, args.week) == (None, None, None):
             year, week = nflgame.live.current_year_and_week()
@@ -198,9 +213,10 @@ def run():
             update_week(sched, year, phase, week)
         else:
             for y, p, w in year_phase_week(args.year, args.phase, args.week):
-                print('Updating (%d, %s, %d)...' % (y, p, w))
+                print("Updating (%d, %s, %d)..." % (y, p, w))
                 update_week(sched, y, p, w)
     write_schedule(args.json_update_file, sched)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     run()

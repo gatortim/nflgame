@@ -79,13 +79,11 @@ We tend to respond fairly quickly!
 import itertools
 
 import sys
+import pytz
 from functools import reduce
 
-if sys.version_info.major != 3:
-    print("nflgame-redux requires Python 3 and not longer works with Python 2.7")
-    print(("You are running Python version {}.{}".format(
-        sys.version_info.major, sys.version_info.minor)))
-    sys.exit(1)
+#
+from nflgame import constants
 
 import nflgame.game  # noqa
 import nflgame.live  # noqa
@@ -93,6 +91,18 @@ import nflgame.player  # noqa
 import nflgame.sched  # noqa
 import nflgame.seq  # noqaj
 from nflgame.version import __version__  # noqa
+
+if sys.version_info.major != 3:
+    print("nflgame-redux requires Python 3 and not longer works with Python 2.7")
+    print(
+        (
+            "You are running Python version {}.{}".format(
+                sys.version_info.major, sys.version_info.minor
+            )
+        )
+    )
+    sys.exit(1)
+
 
 NoPlayers = nflgame.seq.GenPlayerStats(None)
 """
@@ -107,48 +117,15 @@ A dict of all players and meta information about each player keyed
 by GSIS ID. (The identifiers used by NFL.com GameCenter.)
 """
 
-teams = [
-    ['ARI', 'Arizona', 'Cardinals', 'Arizona Cardinals'],
-    ['ATL', 'Atlanta', 'Falcons', 'Atlanta Falcons'],
-    ['BAL', 'Baltimore', 'Ravens', 'Baltimore Ravens'],
-    ['BUF', 'Buffalo', 'Bills', 'Buffalo Bills'],
-    ['CAR', 'Carolina', 'Panthers', 'Carolina Panthers'],
-    ['CHI', 'Chicago', 'Bears', 'Chicago Bears'],
-    ['CIN', 'Cincinnati', 'Bengals', 'Cincinnati Bengals'],
-    ['CLE', 'Cleveland', 'Browns', 'Cleveland Browns'],
-    ['DAL', 'Dallas', 'Cowboys', 'Dallas Cowboys'],
-    ['DEN', 'Denver', 'Broncos', 'Denver Broncos'],
-    ['DET', 'Detroit', 'Lions', 'Detroit Lions'],
-    ['GB', 'Green Bay', 'Packers', 'Green Bay Packers', 'GNB'],
-    ['HOU', 'Houston', 'Texans', 'Houston Texans'],
-    ['IND', 'Indianapolis', 'Colts', 'Indianapolis Colts'],
-    ['JAX', 'Jacksonville', 'Jaguars', 'Jacksonville Jaguars', 'JAC'],
-    ['KC', 'Kansas City', 'Chiefs', 'Kansas City Chiefs', 'KAN'],
-    ['LA', 'Los Angeles', 'Rams', 'Los Angeles Rams', 'LAR'],
-    ['SD', 'San Diego', 'Chargers', 'San Diego Chargers', 'SDG'],
-    ['LAC', 'Los Angeles C', 'Chargers', 'Los Angeles Chargers', 'LAC'],
-    ['MIA', 'Miami', 'Dolphins', 'Miami Dolphins'],
-    ['MIN', 'Minnesota', 'Vikings', 'Minnesota Vikings'],
-    ['NE', 'New England', 'Patriots', 'New England Patriots', 'NWE'],
-    ['NO', 'New Orleans', 'Saints', 'New Orleans Saints', 'NOR'],
-    ['NYG', 'New York G', 'Giants', 'New York Giants'],
-    ['NYJ', 'New York J', 'Jets', 'New York Jets'],
-    ['OAK', 'Oakland', 'Raiders', 'Oakland Raiders'],
-    ['PHI', 'Philadelphia', 'Eagles', 'Philadelphia Eagles'],
-    ['PIT', 'Pittsburgh', 'Steelers', 'Pittsburgh Steelers'],
-    ['SEA', 'Seattle', 'Seahawks', 'Seattle Seahawks'],
-    ['SF', 'San Francisco', '49ers', 'San Francisco 49ers', 'SFO'],
-    ['STL', 'St. Louis', 'Rams', 'St. Louis Rams'],
-    ['TB', 'Tampa Bay', 'Buccaneers', 'Tampa Bay Buccaneers', 'TAM'],
-    ['TEN', 'Tennessee', 'Titans', 'Tennessee Titans'],
-    ['WAS', 'Washington', 'Redskins', 'Washington Redskins', 'WSH'],
-]
+
 """
 A list of all teams. Each item is a list of different ways to
 describe a team. (i.e., JAC, JAX, Jacksonville, Jaguars, etc.).
 The first item in each list is always the standard NFL.com
 team abbreviation (two or three letters).
 """
+
+# TODO: make all of these helper methods or something
 
 
 def find(name, team=None):
@@ -172,15 +149,15 @@ def standard_team(team):
     nflgame.teams (case insensitive).  All known variants of a team name are
     searched. If no team is found, None is returned.
     """
-    team = team.lower().replace('.', '')
-    for variants in teams:
+    team = team.lower().replace(".", "")
+    for variants in constants.teams:
         for variant in variants:
             if team == variant.lower():
                 return variants[0]
     return None
 
 
-def games(year, week=None, home=None, away=None, kind='REG', started=False):
+def games(year, week=None, home=None, away=None, kind="REG", started=False):
     """
     games returns a list of all games matching the given criteria. Each
     game can then be queried for player statistics and information about
@@ -220,8 +197,7 @@ def games(year, week=None, home=None, away=None, kind='REG', started=False):
     return list(games_gen(year, week, home, away, kind, started))
 
 
-def games_gen(year, week=None, home=None, away=None,
-              kind='REG', started=False):
+def games_gen(year, week=None, home=None, away=None, kind="REG", started=False):
     """
     games returns a generator of all games matching the given criteria. Each
     game can then be queried for player statistics and information about
@@ -268,10 +244,11 @@ def games_gen(year, week=None, home=None, away=None,
             if g is None:
                 continue
             yield g
+
     return gen()
 
 
-def one(year, week, home, away, kind='REG', started=False):
+def one(year, week, home, away, kind="REG", started=False):
     """
     one returns a single game matching the given criteria. The
     game can then be queried for player statistics and information about
@@ -311,7 +288,7 @@ def one(year, week, home, away, kind='REG', started=False):
     infos = _search_schedule(year, week, home, away, kind, started)
     if not infos:
         return None
-    assert len(infos) == 1, 'More than one game matches the given criteria.'
+    assert len(infos) == 1, "More than one game matches the given criteria."
     return nflgame.game.Game(**infos[0])
 
 
@@ -346,8 +323,9 @@ def combine_game_stats(games):
     to statistics across an entire week, some number of weeks or an entire
     season.
     """
-    return reduce(lambda ps1, ps2: ps1 + ps2,
-                  [g.players for g in games if g is not None])
+    return reduce(
+        lambda ps1, ps2: ps1 + ps2, [g.players for g in games if g is not None]
+    )
 
 
 def combine_play_stats(games):
@@ -368,8 +346,9 @@ def combine_play_stats(games):
     """
     if not games:
         return []
-    return reduce(lambda p1, p2: p1 + p2,
-                  [g.drives.players() for g in games if g is not None])
+    return reduce(
+        lambda p1, p2: p1 + p2, [g.drives.players() for g in games if g is not None]
+    )
 
 
 def combine_max_stats(games):
@@ -384,8 +363,9 @@ def combine_max_stats(games):
     This function should be used in lieu of combine_game_stats or
     combine_play_stats when the best possible accuracy is desired.
     """
-    return reduce(lambda a, b: a + b,
-                  [g.max_player_stats() for g in games if g is not None])
+    return reduce(
+        lambda a, b: a + b, [g.max_player_stats() for g in games if g is not None]
+    )
 
 
 def combine_plays(games):
@@ -397,8 +377,9 @@ def combine_plays(games):
     return nflgame.seq.GenPlays(chain)
 
 
-def _search_schedule(year=None, week=None, home=None, away=None, kind='REG',
-                     started=False, eid=None):
+def _search_schedule(
+    year=None, week=None, home=None, away=None, kind="REG", started=False, eid=None
+):
     """
     Searches the schedule to find the game identifiers matching the criteria
     given.
@@ -428,10 +409,10 @@ def _search_schedule(year=None, week=None, home=None, away=None, kind='REG',
     """
     infos = []
     for info in nflgame.sched.games.values():
-        y, t, w = info['year'], info['season_type'], info['week']
-        h, a = info['home'], info['away']
+        y, t, w = info["year"], info["season_type"], info["week"]
+        h, a = info["home"], info["away"]
         if eid is not None:
-            if eid == info['eid']:
+            if eid == info["eid"]:
                 # Always return a non-array if eid is a match
                 return info
             else:

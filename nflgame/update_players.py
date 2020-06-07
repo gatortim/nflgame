@@ -53,22 +53,25 @@ from bs4 import BeautifulSoup
 
 try:
     import lxml.html  # noqa
-    PARSER = 'lxml'
+
+    PARSER = "lxml"
 except ImportError:
     try:
         import html5lib  # noqa
-        PARSER = 'html5lib'
+
+        PARSER = "html5lib"
     except ImportError:
-        PARSER = 'html.parser'
+        PARSER = "html.parser"
 
 import nflgame
 import nflgame.live
 import nflgame.player
 
 urls = {
-    'roster': 'http://www.nfl.com/teams/roster',
-    'gsis_profile': 'http://www.nfl.com/players/profile',
+    "roster": "http://www.nfl.com/teams/roster",
+    "gsis_profile": "http://www.nfl.com/players/profile",
 }
+
 
 def initial_mappings(conf):
     metas, reverse = {}, {}
@@ -76,32 +79,32 @@ def initial_mappings(conf):
         with open(conf.json_update_file) as fp:
             metas = json.load(fp)
         for gsis_id, meta in list(metas.items()):
-            reverse[meta['profile_id']] = gsis_id
+            reverse[meta["profile_id"]] = gsis_id
     except IOError as e:
         eprint('Could not open "%s": %s' % (conf.json_update_file, e))
     # Delete some keys in every entry. We do this to stay fresh.
     # e.g., any player with "team" set should be actively on a roster.
     for k in metas:
-        metas[k].pop('team', None)
-        metas[k].pop('status', None)
-        metas[k].pop('position', None)
+        metas[k].pop("team", None)
+        metas[k].pop("status", None)
+        metas[k].pop("position", None)
     return metas, reverse
 
 
 def profile_id_from_url(url):
     if url is None:
         return None
-    m = re.search('/([0-9]+)/', url)
+    m = re.search("/([0-9]+)/", url)
     return None if m is None else int(m.group(1))
 
 
 def profile_url(gsis_id):
-    resp = requests.head(urls['gsis_profile'], params={'id':gsis_id})
+    resp = requests.head(urls["gsis_profile"], params={"id": gsis_id})
     if resp.status_code != 301:
         return None
-    loc = resp.headers['location']
-    if not loc.startswith('http://'):
-        loc = 'http://www.nfl.com' + loc
+    loc = resp.headers["location"]
+    if not loc.startswith("http://"):
+        loc = "http://www.nfl.com" + loc
     return loc
 
 
@@ -109,7 +112,7 @@ def gsis_id(profile_url):
     resp = requests.get(profile_url)
     if resp.status_code != 200:
         return None
-    m = re.search('GSIS\s+ID:\s+([0-9-]+)', resp.text)
+    m = re.search("GSIS\s+ID:\s+([0-9-]+)", resp.text)
     if m is None:
         return None
     gid = m.group(1).strip()
@@ -119,8 +122,10 @@ def gsis_id(profile_url):
 
 
 def roster_soup(team):
-    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.122 Safari/537.36"}
-    resp = requests.get(urls['roster'], params={'team':team}, headers=headers)
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.122 Safari/537.36"
+    }
+    resp = requests.get(urls["roster"], params={"team": team}, headers=headers)
     if resp.status_code != 200:
         return None
     return BeautifulSoup(resp.text, PARSER)
@@ -134,23 +139,23 @@ def try_int(s):
 
 
 def first_int(s):
-    m = re.search('[0-9]+', s)
+    m = re.search("[0-9]+", s)
     if m is None:
         return 0
     return int(m.group(0))
 
 
 def first_word(s):
-    m = re.match('\S+', s)
+    m = re.match("\S+", s)
     if m is None:
-        return ''
+        return ""
     return m.group(0)
 
 
 def height_as_inches(txt):
     # Defaults to 0 if `txt` isn't parseable.
     feet, inches = 0, 0
-    pieces = re.findall('[0-9]+', txt)
+    pieces = re.findall("[0-9]+", txt)
     if len(pieces) >= 1:
         feet = try_int(pieces[0])
         if len(pieces) >= 2:
@@ -160,32 +165,32 @@ def height_as_inches(txt):
 
 def meta_from_soup_row(team, soup_row):
     tds, data = [], []
-    for td in soup_row.find_all('td'):
+    for td in soup_row.find_all("td"):
         tds.append(td)
         data.append(td.get_text().strip())
-    profile_url = 'http://www.nfl.com%s' % tds[1].a['href']
+    profile_url = "http://www.nfl.com%s" % tds[1].a["href"]
 
     name = tds[1].a.get_text().strip()
-    if ',' not in name:
-        last_name, first_name = name, ''
+    if "," not in name:
+        last_name, first_name = name, ""
     else:
-        last_name, first_name = [s.strip() for s in name.split(',')][:2]
+        last_name, first_name = [s.strip() for s in name.split(",")][:2]
 
     return {
-        'team': team,
-        'profile_id': profile_id_from_url(profile_url),
-        'profile_url': profile_url,
-        'number': try_int(data[0]),
-        'first_name': first_name,
-        'last_name': last_name,
-        'full_name': '%s %s' % (first_name, last_name),
-        'position': data[2],
-        'status': data[3],
-        'height': height_as_inches(data[4]),
-        'weight': first_int(data[5]),
-        'birthdate': data[6],
-        'years_pro': try_int(data[7]),
-        'college': data[8],
+        "team": team,
+        "profile_id": profile_id_from_url(profile_url),
+        "profile_url": profile_url,
+        "number": try_int(data[0]),
+        "first_name": first_name,
+        "last_name": last_name,
+        "full_name": "%s %s" % (first_name, last_name),
+        "position": data[2],
+        "status": data[3],
+        "height": height_as_inches(data[4]),
+        "weight": first_int(data[5]),
+        "birthdate": data[6],
+        "years_pro": try_int(data[7]),
+        "college": data[8],
     }
 
 
@@ -194,49 +199,53 @@ def meta_from_profile_html(html):
         return html
     try:
         soup = BeautifulSoup(html, PARSER)
-        pinfo = soup.find(id='player-bio').find(class_='player-info')
+        pinfo = soup.find(id="player-bio").find(class_="player-info")
 
         # Get the full name and split it into first and last.
         # Assume that if there are no spaces, then the name is the last name.
         # Otherwise, all words except the last make up the first name.
         # Is that right?
-        name = pinfo.find(class_='player-name').get_text().strip()
-        name_pieces = name.split(' ')
+        name = pinfo.find(class_="player-name").get_text().strip()
+        name_pieces = name.split(" ")
         if len(name_pieces) == 1:
-            first, last = '', name
+            first, last = "", name
         else:
-            first, last = ' '.join(name_pieces[0:-1]), name_pieces[-1]
+            first, last = " ".join(name_pieces[0:-1]), name_pieces[-1]
         meta = {
-            'first_name': first,
-            'last_name': last,
-            'full_name': name,
+            "first_name": first,
+            "last_name": last,
+            "full_name": name,
         }
 
         # The position is only in the <title>... Weird.
-        title = soup.find('title').get_text()
-        m = re.search(',\s+([A-Z]+)', title)
+        title = soup.find("title").get_text()
+        m = re.search(",\s+([A-Z]+)", title)
         if m is not None:
-            meta['position'] = m.group(1)
+            meta["position"] = m.group(1)
 
         # Look for a whole bunch of fields in the format "Field: Value".
         search = pinfo.get_text()
-        fields = {'Height': 'height', 'Weight': 'weight', 'Born': 'birthdate',
-                  'College': 'college'}
+        fields = {
+            "Height": "height",
+            "Weight": "weight",
+            "Born": "birthdate",
+            "College": "college",
+        }
         for f, key in list(fields.items()):
-            m = re.search('%s:\s+([\S ]+)' % f, search)
+            m = re.search("%s:\s+([\S ]+)" % f, search)
             if m is not None:
                 meta[key] = m.group(1)
-                if key == 'height':
+                if key == "height":
                     meta[key] = height_as_inches(meta[key])
-                elif key == 'weight':
+                elif key == "weight":
                     meta[key] = first_int(meta[key])
-                elif key == 'birthdate':
+                elif key == "birthdate":
                     meta[key] = first_word(meta[key])
 
         # Experience is a little weirder...
-        m = re.search('Experience:\s+([0-9]+)', search)
+        m = re.search("Experience:\s+([0-9]+)", search)
         if m is not None:
-            meta['years_pro'] = int(m.group(1))
+            meta["years_pro"] = int(m.group(1))
 
         return meta
     except AttributeError:
@@ -255,86 +264,119 @@ def players_from_games(existing, games):
 
 
 def eprint(*args, **kwargs):
-    kwargs['file'] = sys.stderr
+    kwargs["file"] = sys.stderr
     print(*args, **kwargs)
 
 
 def progress(cur, total):
     ratio = 100 * (float(cur) / float(total))
-    eprint('\r%d/%d complete. (%0.2f%%)' % (cur, total, ratio), end='')
+    eprint("\r%d/%d complete. (%0.2f%%)" % (cur, total, ratio), end="")
 
 
 def progress_done():
-    eprint('\nDone!')
+    eprint("\nDone!")
 
 
 def run():
     parser = argparse.ArgumentParser(
-        description='Efficiently download player meta data from NFL.com. Note '
-                    'that each invocation of this program guarantees at least '
-                    '32 HTTP requests to NFL.com',
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+        description="Efficiently download player meta data from NFL.com. Note "
+        "that each invocation of this program guarantees at least "
+        "32 HTTP requests to NFL.com",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
     aa = parser.add_argument
-    aa('--json-update-file', type=str, default=None,
-       help='When set, the file provided will be updated in place with new '
-            'meta data from NFL.com. If this option is not set, then the '
-            '"players.json" file that comes with nflgame will be updated '
-            'instead.')
-    aa('--simultaneous-reqs', type=int, default=3,
-       help='The number of simultaneous HTTP requests sent to NFL.com at a '
-            'time. Set this lower if you are worried about hitting their '
-            'servers.')
-    aa('--full-scan', action='store_true',
-       help='Forces a full scan of nflgame player data since 2009. Typically, '
-            'this is only done when starting with a fresh JSON player '
-            'database. But it can be useful to re-scan all of the players if '
-            'past errors went ignored and data is missing. The advantage of '
-            'using this option over starting fresh is that an existing '
-            '(gsis_id <-> profile_id) mapping can be used for the majority of '
-            'players, instead of querying NFL.com for the mapping all over '
-            'again.')
-    aa('--no-block', action='store_true',
-       help='When set, this program will exit with an error instead of '
-            'displaying a prompt to continue. This is useful when calling '
-            'this program from another script. The idea here is not to block '
-            'indefinitely if something goes wrong and the program wants to '
-            'do a fresh update.')
-    aa('--phase', default=None, choices=['PRE', 'REG', 'POST'],
-       help='Force the update to use the given phase of the season.')
-    aa('--year', default=None, type=int,
-       help='Force the update to use nflgame players from a specific year.')
-    aa('--week', default=None, type=int,
-       help='Force the update to use nflgame players from a specific week.')
+    aa(
+        "--json-update-file",
+        type=str,
+        default=None,
+        help="When set, the file provided will be updated in place with new "
+        "meta data from NFL.com. If this option is not set, then the "
+        '"players.json" file that comes with nflgame will be updated '
+        "instead.",
+    )
+    aa(
+        "--simultaneous-reqs",
+        type=int,
+        default=3,
+        help="The number of simultaneous HTTP requests sent to NFL.com at a "
+        "time. Set this lower if you are worried about hitting their "
+        "servers.",
+    )
+    aa(
+        "--full-scan",
+        action="store_true",
+        help="Forces a full scan of nflgame player data since 2009. Typically, "
+        "this is only done when starting with a fresh JSON player "
+        "database. But it can be useful to re-scan all of the players if "
+        "past errors went ignored and data is missing. The advantage of "
+        "using this option over starting fresh is that an existing "
+        "(gsis_id <-> profile_id) mapping can be used for the majority of "
+        "players, instead of querying NFL.com for the mapping all over "
+        "again.",
+    )
+    aa(
+        "--no-block",
+        action="store_true",
+        help="When set, this program will exit with an error instead of "
+        "displaying a prompt to continue. This is useful when calling "
+        "this program from another script. The idea here is not to block "
+        "indefinitely if something goes wrong and the program wants to "
+        "do a fresh update.",
+    )
+    aa(
+        "--phase",
+        default=None,
+        choices=["PRE", "REG", "POST"],
+        help="Force the update to use the given phase of the season.",
+    )
+    aa(
+        "--year",
+        default=None,
+        type=int,
+        help="Force the update to use nflgame players from a specific year.",
+    )
+    aa(
+        "--week",
+        default=None,
+        type=int,
+        help="Force the update to use nflgame players from a specific week.",
+    )
     args = parser.parse_args()
 
     if args.json_update_file is None:
         args.json_update_file = nflgame.player._player_json_file
-    teams = [team[0] for team in nflgame.teams if team[0] != 'STL']
+    teams = [team[0] for team in nflgame.teams if team[0] != "STL"]
     pool = multiprocessing.pool.ThreadPool(args.simultaneous_reqs)
 
     # Before doing anything laborious, make sure we have write access to
     # the JSON database.
     if not os.access(args.json_update_file, os.W_OK):
         eprint('I do not have write access to "%s".' % args.json_update_file)
-        eprint('Without write access, I cannot update the player database.')
+        eprint("Without write access, I cannot update the player database.")
         sys.exit(1)
 
     # Fetch the initial mapping of players.
     metas, reverse = initial_mappings(args)
     if len(metas) == 0:
         if args.no_block:
-            eprint('I want to do a full update, but I have been told to\n'
-                   'exit instead of asking if you want to continue.')
+            eprint(
+                "I want to do a full update, but I have been told to\n"
+                "exit instead of asking if you want to continue."
+            )
             sys.exit(1)
 
         eprint("nflgame doesn't know about any players.")
-        eprint("Updating player data will require several thousand HTTP HEAD "
-               "requests to NFL.com.")
-        eprint("It is strongly recommended to find the 'players.json' file "
-               "that comes with nflgame.")
-        eprint("Are you sure you want to continue? [y/n] ", end='')
+        eprint(
+            "Updating player data will require several thousand HTTP HEAD "
+            "requests to NFL.com."
+        )
+        eprint(
+            "It is strongly recommended to find the 'players.json' file "
+            "that comes with nflgame."
+        )
+        eprint("Are you sure you want to continue? [y/n] ", end="")
         answer = input()
-        if answer[0].lower() != 'y':
+        if answer[0].lower() != "y":
             eprint("Quitting...")
             sys.exit(1)
 
@@ -344,7 +386,7 @@ def run():
     # Now fetch a set of players that aren't in our mapping already.
     # Restrict the search to the current week if we have a non-empty mapping.
     if len(metas) == 0 or args.full_scan:
-        eprint('Loading players in games since 2009, this may take a while...')
+        eprint("Loading players in games since 2009, this may take a while...")
         players = {}
 
         # Grab players one game a time to avoid obscene memory requirements.
@@ -352,10 +394,10 @@ def run():
             # If the game is too far in the future, skip it...
             if nflgame.live._game_datetime(schedule) > nflgame.live._now():
                 continue
-            g = nflgame.game.Game(schedule['eid'])
+            g = nflgame.game.Game(schedule["eid"])
             for pid, name in players_from_games(metas, [g]):
                 players[pid] = name
-        eprint('Done.')
+        eprint("Done.")
     else:
         phase = nflgame.live._cur_season_phase
         eprint("Fetching games for...")
@@ -377,77 +419,81 @@ def run():
             week = args.week
             eprint("Week - {}".format(week))
 
-
         try:
             games = nflgame.games(year, week, kind=phase)
             eprint("{} games found".format(len(games)))
         except TypeError:
-            eprint('No games found')
+            eprint("No games found")
             return
 
         players = dict(players_from_games(metas, games))
 
     # Find the profile ID for each new player.
     if len(players) > 0:
-        eprint('Finding (profile id -> gsis id) mapping for players...')
+        eprint("Finding (profile id -> gsis id) mapping for players...")
 
         def fetch(t):  # t[0] is the gsis_id and t[1] is the gsis name
             return t[0], t[1], profile_url(t[0])
+
         for i, t in enumerate(pool.imap(fetch, list(players.items())), 1):
             gid, name, purl = t
             pid = profile_id_from_url(purl)
 
             progress(i, len(players))
             if purl is None or pid is None:
-                errors.append('Could not get profile URL for (%s, %s)'
-                              % (gid, name))
+                errors.append("Could not get profile URL for (%s, %s)" % (gid, name))
                 continue
 
             assert gid not in metas
-            metas[gid] = {'gsis_id': gid, 'gsis_name': name,
-                          'profile_url': purl, 'profile_id': pid}
+            metas[gid] = {
+                "gsis_id": gid,
+                "gsis_name": name,
+                "profile_url": purl,
+                "profile_id": pid,
+            }
             reverse[pid] = gid
         progress_done()
 
     # Get the soup for each team roster.
-    eprint('Downloading team rosters...')
+    eprint("Downloading team rosters...")
     roster = []
 
     def fetch(team):
         return team, roster_soup(team)
+
     for i, (team, soup) in enumerate(pool.imap(fetch, teams), 1):
         progress(i, len(teams))
 
         if soup is None:
-            errors.append('Could not get roster for team %s' % team)
+            errors.append("Could not get roster for team %s" % team)
             continue
 
-        tbodys = soup.find(id='result').find_all('tbody')
+        tbodys = soup.find(id="result").find_all("tbody")
 
-        for row in tbodys[len(tbodys)-1].find_all('tr'):
+        for row in tbodys[len(tbodys) - 1].find_all("tr"):
             try:
                 roster.append(meta_from_soup_row(team, row))
             except Exception:
                 errors.append(
-                    'Could not get player info from roster row:\n\n%s\n\n'
-                    'Exception:\n\n%s\n\n'
-                    % (row, traceback.format_exc()))
+                    "Could not get player info from roster row:\n\n%s\n\n"
+                    "Exception:\n\n%s\n\n" % (row, traceback.format_exc())
+                )
     progress_done()
 
     # Find the gsis identifiers for players that are in the roster but haven't
     # recorded a statistic yet. (i.e., Not in nflgame play data.)
-    purls = [r['profile_url']
-             for r in roster if r['profile_id'] not in reverse]
+    purls = [r["profile_url"] for r in roster if r["profile_id"] not in reverse]
     if len(purls) > 0:
-        eprint('Fetching GSIS identifiers for players not in nflgame...')
+        eprint("Fetching GSIS identifiers for players not in nflgame...")
 
         def fetch(purl):
             return purl, gsis_id(purl)
+
         for i, (purl, gid) in enumerate(pool.imap(fetch, purls), 1):
             progress(i, len(purls))
 
             if gid is None:
-                errors.append('Could not get GSIS id at %s' % purl)
+                errors.append("Could not get GSIS id at %s" % purl)
                 continue
             reverse[profile_id_from_url(purl)] = gid
         progress_done()
@@ -455,57 +501,60 @@ def run():
     # Now merge the data from `rosters` into `metas` by using `reverse` to
     # establish the correspondence.
     for data in roster:
-        gsisid = reverse.get(data['profile_id'], None)
+        gsisid = reverse.get(data["profile_id"], None)
         if gsisid is None:
-            errors.append('Could not find gsis_id for %s' % data)
+            errors.append("Could not find gsis_id for %s" % data)
             continue
         merged = dict(metas.get(gsisid, {}), **data)
-        merged['gsis_id'] = gsisid
+        merged["gsis_id"] = gsisid
         metas[gsisid] = merged
 
     # Finally, try to scrape meta data for players who aren't on a roster
     # but have recorded a statistic in nflgame.
-    gids = [(gid, meta['profile_url'])
-            for gid, meta in metas.items()
-            if 'full_name' not in meta and 'profile_url' in meta]
+    gids = [
+        (gid, meta["profile_url"])
+        for gid, meta in metas.items()
+        if "full_name" not in meta and "profile_url" in meta
+    ]
     if len(gids):
-        eprint('Fetching meta data for players not on a roster...')
+        eprint("Fetching meta data for players not on a roster...")
 
         def fetch(t):
             gid, purl = t
             resp = requests.get(purl)
-            if resp.status_code != '200':
-                if resp.status_code == '404':
+            if resp.status_code != "200":
+                if resp.status_code == "404":
                     return gid, purl, False
                 else:
                     return gid, purl, None
             return gid, purl, resp.content
+
         for i, (gid, purl, html) in enumerate(pool.imap(fetch, gids), 1):
             progress(i, len(gids))
             more_meta = meta_from_profile_html(html)
             if not more_meta:
                 # If more_meta is False, then it was a 404. Not our problem.
                 if more_meta is None:
-                    errors.append('Could not fetch HTML for %s' % purl)
+                    errors.append("Could not fetch HTML for %s" % purl)
                 continue
             metas[gid] = dict(metas[gid], **more_meta)
         progress_done()
 
     assert len(metas) > 0, "Have no players to add... ???"
-    with open(args.json_update_file, 'w+') as fp:
-        json.dump(metas, fp, indent=4, sort_keys=True,
-                  separators=(',', ': '))
+    with open(args.json_update_file, "w+") as fp:
+        json.dump(metas, fp, indent=4, sort_keys=True, separators=(",", ": "))
 
     if len(errors) > 0:
-        eprint('\n')
-        eprint('There were some errors during the download. Usually this is a')
-        eprint('result of an HTTP request timing out, which means the')
+        eprint("\n")
+        eprint("There were some errors during the download. Usually this is a")
+        eprint("result of an HTTP request timing out, which means the")
         eprint('resulting "players.json" file is probably missing some data.')
-        eprint('An appropriate solution is to re-run the script until there')
-        eprint('are no more errors (or when the errors are problems on ')
-        eprint('NFL.com side.)')
-        eprint('-' * 79)
-        eprint(('\n' + ('-' * 79) + '\n').join(errors))
+        eprint("An appropriate solution is to re-run the script until there")
+        eprint("are no more errors (or when the errors are problems on ")
+        eprint("NFL.com side.)")
+        eprint("-" * 79)
+        eprint(("\n" + ("-" * 79) + "\n").join(errors))
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     run()
